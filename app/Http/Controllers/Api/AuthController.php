@@ -1,0 +1,85 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use Illuminate\Http\Request;
+use App\Http\Requests\StoreUser;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Hash;
+use Symfony\Component\HttpFoundation\Response;
+use app\Models\Role;
+
+class AuthController extends Controller
+{
+    public function register(StoreUser $request) {
+        try{
+            //alta del usuario
+            $user = new User();
+            $user->name = $request->name;
+            $user->email = $request->email;
+            $user->password = Hash::make($request->password);
+            $user->assignRole($request->roles);
+            $user->save();
+            return response($user, Response::HTTP_CREATED);
+        }catch (Exception $e) {
+            return response()->json(['Error, rellena los campos' => $e->getMessage()], 400);
+        }
+    }
+
+
+
+
+        //Login del usuario
+    public function login(Request $request) {
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required']
+        ]);
+
+        if (Auth::attempt($credentials)) {
+            $user = Auth::user();
+            $token = $user->createToken('token')->plainTextToken;
+            $cookie = cookie('cookie_token', $token, 60 * 24);
+            return response(["token"=>$token], Response::HTTP_OK)->withoutCookie($cookie);
+        } else {
+            return response(["message"=> "Credenciales inválidas"],Response::HTTP_UNAUTHORIZED);
+        }
+    }
+
+
+
+
+
+
+    public function userProfile(Request $request) {
+        return response()->json([
+            "message" => "userProfile OK",
+            "userData" => auth()->user()
+        ], Response::HTTP_OK);
+    }
+
+
+
+
+//logout del usuario
+    public function logout() {
+        $cookie = Cookie::forget('cookie_token');
+        return response(["message"=>"Cierre de sesión OK"], Response::HTTP_OK)->withCookie($cookie);
+    }
+
+
+
+
+
+
+//show  de usuario
+    public function allUsers() {
+       $users = User::all();
+       return response()->json([
+        "users" => $users
+       ]);
+    }
+}
